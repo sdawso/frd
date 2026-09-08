@@ -102,6 +102,4 @@ if __name__ == '__main__':
                             med_hwhm_right_deg=frd['med_hwhm_right_deg'],
                             theta_peak_deg=unp.nominal_values(frd['theta_peak_deg']),
                             )
-        postproc.plot_eccentricity(results, input_angles, title_prefix=f"{fiber} ")
-
 
