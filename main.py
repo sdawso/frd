@@ -23,7 +23,7 @@ if __name__ == '__main__':
     plot_full_fibers = True
 
     pixel_size_mm = 2.4e-3
-    (h, w) = (3648, 5472)
+    (h, w) = (3660, 5480)
 
     all_results, frd_results = {}, {}
     for fiber in fiber_names:

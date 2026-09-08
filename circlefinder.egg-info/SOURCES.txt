@@ -1,0 +1,6 @@
+pyproject.toml
+circlefinder.egg-info/PKG-INFO
+circlefinder.egg-info/SOURCES.txt
+circlefinder.egg-info/dependency_links.txt
+circlefinder.egg-info/requires.txt
+circlefinder.egg-info/top_level.txt

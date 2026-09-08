@@ -1,9 +1,6 @@
 import logging
 from PIL import Image
 import numpy as np
-import uncertainties.unumpy as unp
-from uncertainties.umath import *
-from uncertainties import ufloat, correlated_values
 from astropy.stats import sigma_clip
 from scipy.ndimage import binary_opening, median_filter
 from pathlib import Path

@@ -2,8 +2,7 @@ import cv2
 import logging
 import numpy as np
 import uncertainties.unumpy as unp
-from uncertainties.umath import *
-from uncertainties import ufloat, correlated_values
+from uncertainties import ufloat
 from astropy.stats import sigma_clipped_stats
 from astropy.table import Table
 from scipy.signal import find_peaks
