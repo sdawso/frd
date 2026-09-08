@@ -14,10 +14,10 @@ File tree is organized as follows:
 
 ### circlefinder/
 * main.py - execution file, most tweaks happen here
-  * Below is the block you mostly want to focus on here, unless making more significant changes:
+  * Below is the block you mostly want to focus on tweaking, unless making more significant changes:
     ```python
     base_dir = Path(__file__).parent / 'data'    # change to parent directory of image data files, data/ is the default storage dir
-    fiber_names = sorted(p.name for p in base_dir.glob('control-2*') # directory/directories of focus    # change 'control-2*' to whatever you named your datafile, 
+    fiber_names = sorted(p.name for p in base_dir.glob('control-2*') # change 'control-2*' to the datafile of focus, wildcards accepted for multiple runs
                          if p.is_dir() and not p.name.endswith("-bad"))
     if not fiber_names:
         raise SystemExit(f"No fiber directories found under {base_dir}")
@@ -29,7 +29,16 @@ File tree is organized as follows:
 
     pixel_size_mm = 2.4e-3
     (h, w) = (3660, 5480)
-    ``` 
+    ```
+    You should see the logger output the correct series of angles corresponding to your data if everything runs well. Example log using control-2:
+    ```console
+    DEBUG wrapper: CACHEDIR=/Users/bro/.matplotlib
+    DEBUG _load_fontmanager: Using fontManager instance from /Users/bro/.matplotlib/fontlist-v390.json
+    INFO <module>: Processing control-2-g1-e400k-9mm
+    INFO <module>:   [*] Found input angles: [ 5.  6.  7.  8.  9. 10. 11. 12.]
+    ```
+    The software should take it from there, god willing
+    
 * input.py - intake and reduction functions
 * analysis.py - annular contour generation, elliptical change-of-basis and crest data analysis, radial profile generation. meat and potatoes file
 * postproc.py - a bunch of matplotlib functions, some useful some not. functions of importance are plot_hwhm_channels and plot_stats. everything else is largely experimental
