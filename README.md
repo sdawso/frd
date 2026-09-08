@@ -18,8 +18,7 @@ File tree is organized as follows:
     ```python
     base_dir = Path(__file__).parent / 'data'    # change to parent directory of image data files,
                                                  # data/ is the default storage dir
-    fiber_names = sorted(p.name for p in base_dir.glob('control-2*') # change 'control-2*'
-                                                                     # to the datafile of focus,
+    fiber_names = sorted(p.name for p in base_dir.glob('control-2*') # change 'control-2*' to the datafile of focus,
                                                                      # wildcards accepted for multiple runs
                          if p.is_dir() and not p.name.endswith("-bad"))
     if not fiber_names:
