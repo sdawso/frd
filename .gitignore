@@ -1,0 +1,9 @@
+EOF'
+*.png
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+*.bak
+.DS_Store
+.idea/
+EOF
