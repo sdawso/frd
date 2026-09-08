@@ -47,6 +47,8 @@ File tree is organized as follows:
 * input.py - intake and reduction functions
 * analysis.py - annular contour generation, elliptical change-of-basis and crest data analysis, radial profile generation. meat and potatoes file
 * postproc.py - a bunch of matplotlib functions, some useful some not. functions of importance are plot_hwhm_channels and plot_stats. everything else is largely experimental
+* data/
+ * control-2-g1-e400k-9mm/: a demonstrative series of input images and darks with very good quality, except for the last frame
 
 
 *Anthropic's Claude and Google's Gemini were used in this repository for generating matplotlib functions and general debugging passes. All code drafted by me (Simon) unless otherwise credited.*
