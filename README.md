@@ -49,4 +49,4 @@ File tree is organized as follows:
 * postproc.py - a bunch of matplotlib functions, some useful some not. functions of importance are plot_hwhm_channels and plot_stats. everything else is largely experimental
 
 
-*Anthropic's Claude and Google's Gemini were used for generating matplotlib functions and general debugging passes. All code drafted by me (Simon) unless otherwise credited.*
+*Anthropic's Claude and Google's Gemini were used in this repository for generating matplotlib functions and general debugging passes. All code drafted by me (Simon) unless otherwise credited.*
