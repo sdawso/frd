@@ -16,8 +16,11 @@ File tree is organized as follows:
 * main.py - execution file, most tweaks happen here
   * Below is the block you mostly want to focus on tweaking, unless making more significant changes:
     ```python
-    base_dir = Path(__file__).parent / 'data'    # change to parent directory of image data files, data/ is the default storage dir
-    fiber_names = sorted(p.name for p in base_dir.glob('control-2*') # change 'control-2*' to the datafile of focus, wildcards accepted for multiple runs
+    base_dir = Path(__file__).parent / 'data'    # change to parent directory of image data files,
+                                                 # data/ is the default storage dir
+    fiber_names = sorted(p.name for p in base_dir.glob('control-2*') # change 'control-2*'
+                                                                     # to the datafile of focus,
+                                                                     # wildcards accepted for multiple runs
                          if p.is_dir() and not p.name.endswith("-bad"))
     if not fiber_names:
         raise SystemExit(f"No fiber directories found under {base_dir}")
