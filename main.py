@@ -80,9 +80,6 @@ if __name__ == '__main__':
         D = frd['camera_dist_mm']
         a0 = frd['intercept_mm']
         r0_deg = np.degrees(np.arctan(a0.nominal_value / D.nominal_value))
-        print(f"  Calibrated distance: {D.nominal_value:.3f} ± {D.std_dev:.3f} mm "
-              f"(nominal {camera_dist_mm} mm); zero-angle footprint"
-              f"{a0.nominal_value * 1e3:.1f} µm ({r0_deg:.2f}° divergence)")
 
         logger.info(f"Plotting {fiber}")
         results, frd = all_results[fiber], frd_results.get(fiber)

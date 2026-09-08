@@ -13,12 +13,10 @@ PIXEL_SIZE_MM = 4.8e-3
 CAMERA_DIST_MM = 10.0
 
 def _px_to_deg(r_px, pixel_size_mm=PIXEL_SIZE_MM, camera_dist_mm=CAMERA_DIST_MM):
-    """Convert a radial pixel offset to an on-sky angle in degrees."""
     return np.degrees(np.arctan((np.asarray(r_px, dtype=float) * pixel_size_mm) / camera_dist_mm))
 
 
 def _plot_measured(ax, x, y, yerr, marker, color, edge, label, **kwargs):
-    """Scatter with error bars when uncertainties are available, plain scatter otherwise."""
     if yerr is not None:
         ax.errorbar(x, y, yerr=yerr, fmt=marker, color=color, markeredgecolor=edge,
                     capsize=3, zorder=5, label=label, **kwargs)
@@ -28,10 +26,6 @@ def _plot_measured(ax, x, y, yerr, marker, color, edge, label, **kwargs):
 
 
 def _plot_deltas(ax, peak_r, deltas, sign, x_px, y_data, color, **kwargs):
-    """Interpolate and mark HWHM crossings offset from a peak by ``sign * deltas``.
-
-    Returns False when there is nothing to draw so callers can stay terse.
-    """
     if deltas is None or len(deltas) == 0 or peak_r is None:
         return False
     x_cross = peak_r + sign * np.asarray(deltas, dtype=float)
@@ -48,13 +42,8 @@ _HWHM_SIDES = (
 def plot_stats(input_angles, sigma_deg=None, sigma_err=None,
                hwhm_left_deg=None, hwhm_right_deg=None,
                flux_rel=None, image=None, title_prefix="",
-               med_hwhm_left_deg=None, med_hwhm_right_deg=None,
-               theta_peak_deg=None):
-    """Summary dashboard: ring broadening, HWHM channels, throughput and pixel histogram.
+               med_hwhm_left_deg=None, med_hwhm_right_deg=None,):
 
-    ``theta_peak_deg`` is accepted for caller compatibility but is not rendered;
-    azimuthal peak wobble is shown by :func:`plot_eccentricity` instead.
-    """
     logger.debug(f"Starting setup for {title_prefix}")
     plots = []
     if sigma_deg is not None: plots.append('sigma')
@@ -191,7 +180,6 @@ def plot_image(result):
     ax.imshow(img, cmap='magma', origin='lower')
     ax.set_title('Far-Field Annulus & Ellipse Fit')
 
-    # Scale the fitted ellipse so its mean semi-axis lands on the ring crest.
     scale = r_mean / ((ax_a + ax_b) / 4)
     ax.add_patch(Ellipse((cx, cy), ax_a * scale, ax_b * scale, angle=img_angle,
                          color='red', fill=False, lw=1.5, linestyle='--'))
@@ -202,10 +190,6 @@ def plot_image(result):
 
 
 def plot_eccentricity(results, angles, title_prefix=""):
-    """OPTION 2 diagnostic: azimuthal ring-peak wobble, kept separate from the
-    HWHM subplot so eccentric annuli don't contaminate the flank-width signal.
-    Uses peak_scatter (std of per-slice raw_peak_r) and per-slice raw_peak_r
-    vs. theta_centers, both already computed in profile_analysis()."""
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(9, 4.5), tight_layout=True)
 
     scatter = [r['peak_scatter'] if r else np.nan for r in results]
@@ -231,7 +215,6 @@ def plot_eccentricity(results, angles, title_prefix=""):
 def plot_hwhm_channels(results, angles, pixel_size_mm=PIXEL_SIZE_MM, camera_dist_mm=CAMERA_DIST_MM,
                        ax1_x0=None, ax1_x1=None, ax2_x0=None, ax2_x1=None,
                        title_prefix="", show_ee=True):
-    """Plots the 1D radial profile, the Voigt fit, and (optionally) the Encircled Energy curves."""
     logger.debug(f"Setting up subplots for {title_prefix}")
 
     valid_data = [(res, ang) for res, ang in zip(results, angles) if res]
@@ -239,7 +222,6 @@ def plot_hwhm_channels(results, angles, pixel_size_mm=PIXEL_SIZE_MM, camera_dist
     if N == 0:
         return
 
-    # Expand to a 2-row layout if EE is requested (Row 1: Profile, Row 2: Combined EE)
     nrows = 2 if show_ee else 1
     fig, axes = plt.subplots(nrows, N, figsize=(8 * N, 8 * nrows), tight_layout=True)
     axes = np.atleast_1d(axes).reshape(nrows, N)
@@ -281,7 +263,6 @@ def plot_hwhm_channels(results, angles, pixel_size_mm=PIXEL_SIZE_MM, camera_dist
             _plot_deltas(ax_rad, raw_peak_r, result.get(key), sign, x_px, y_data, fmt,
                          markersize=6, zorder=10, label=lbl)
 
-        # Use the unified crossing logic instead of the deprecated median helper
         master_peak = int(np.argmax(y_data))
         left_deltas, right_deltas, _ = analysis._hwhm_crossings(
             y_data, x_px, master_peak, debounce_px=20, bin_step=5.0
@@ -306,7 +287,6 @@ def plot_hwhm_channels(results, angles, pixel_size_mm=PIXEL_SIZE_MM, camera_dist
         if not show_ee:
             continue
 
-        # Row 2: Combined Theoretical & Empirical EE
         ax_ee = axes[1, i]
         ee_curves = (
             ('ee', 'ee_r_theoretical', 'blue', '-', 'Moffat', 'bo'),
@@ -334,11 +314,7 @@ def plot_hwhm_channels(results, angles, pixel_size_mm=PIXEL_SIZE_MM, camera_dist
 
 
 def plot_2d_annulus_contours(result, title="2D Planar Intensity with Contours", save_path=None):
-    """
-    Renders a flattened 2D planar map of the image and overlays contours
-    outlining the EE95, HWHM channels, peak crest, and EE15 (inner contour).
-    Requires a 'result' dictionary generated by profile_analysis().
-    """
+
     logger.debug(f"Starting 2D planar rendering for '{title}'...")
 
     image = result['image']
@@ -354,7 +330,6 @@ def plot_2d_annulus_contours(result, title="2D Planar Intensity with Contours", 
     if r_ee95 is None or np.isnan(r_ee95):
         r_ee95 = result.get('ee95_radius_moffat')
 
-    # Interpolate the EE curve to find the 15% energy boundary radius
     r_ee15 = None
     if ee_emp is not None and ee_r_px is not None:
         r_ee15 = float(np.interp(0.15, ee_emp, ee_r_px))
@@ -372,7 +347,6 @@ def plot_2d_annulus_contours(result, title="2D Planar Intensity with Contours", 
     fig.colorbar(im, ax=ax, shrink=0.7, label='Intensity')
     ax.set(title=title, xlabel='X Pixel', ylabel='Y Pixel')
 
-    # Map each scalar radius onto the fitted ellipse using the shared analysis geometry.
     theta_dense = np.linspace(0, 360, 720)
     for label, (R, color, style) in radii_dict.items():
         if R is None or not np.isfinite(R):
@@ -383,14 +357,12 @@ def plot_2d_annulus_contours(result, title="2D Planar Intensity with Contours", 
 
     ax.legend(loc='upper right')
 
-    # Zoom in reasonably close to the ring footprint without clipping it
     a, b = axes[0] / 2, axes[1] / 2
     max_r = max(R for R, _, _ in radii_dict.values() if R is not None and np.isfinite(R))
     pad = max_r * max(a, b) / ((a + b) / 2) + 50
 
     h, w = image.shape[:2]
     ax.set_xlim(max(0, center[0] - pad), min(w, center[0] + pad))
-    # Inverted visually to match origin='upper' pixel array format
     ax.set_ylim(min(h, center[1] + pad), max(0, center[1] - pad))
 
     if save_path:
@@ -403,12 +375,8 @@ def plot_2d_annulus_contours(result, title="2D Planar Intensity with Contours", 
 
 def plot_3d_intensity(image, title="3D Pixel Intensity Map", save_path=None, mesh_profiles=None,
                       theta_centers=None, r_coords_master=None, center=None, axes=None, angle=None):
-    """
-    Creates a 3D surface plot mapping physical pixel coordinates to intensity values on the Z-axis.
-    If mesh reconstruction data is provided, it modifies the figure to display the raw data alongside
-    an azimuthally extruded 3D model for every individual profile slice.
-    """
-    logger.debug(f"Starting 3D rendering for '{title}'. This may hang matplotlib...")
+
+    logger.debug(f"Starting 3D rendering for '{title}'")
     X, Y = np.meshgrid(np.arange(image.shape[1]), np.arange(image.shape[0]))
 
     extrude = mesh_profiles is not None and center is not None
@@ -432,7 +400,6 @@ def plot_3d_intensity(image, title="3D Pixel Intensity Map", save_path=None, mes
     if extrude:
         logger.debug(f"Generating {num_slices} azimuthally extruded radial profile subplots...")
 
-        # Dense azimuthal extrusion base geometry, mapped through the shared analysis transform.
         theta_dense = np.linspace(0, 360, 100)
         R, THETA = np.meshgrid(r_coords_master, theta_dense)
         x_reconstructed, y_reconstructed = analysis._ring_xy_coordinates(R, THETA, center, axes, angle)
