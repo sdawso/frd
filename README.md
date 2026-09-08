@@ -3,7 +3,14 @@ Intended to be paired with optical table capable of producing a collimated beam 
 
 [An example of conducting a collimated beam FRD test (not exactly this setup but conceptually similar)](https://opg.optica.org/viewmedia.cfm?r=1&rwjcode=ao&URI=ao-55-25-6829&seq=0&origin=search)
 
-***Be sure to build the uv environment before running the function on the included test datafile, unless you want to install everything yourself***
+An example of a collimated annulus input frame -- 7 degrees offset, output face ~9 mm from CCD:
+![ringo](data/readme_img.jpg)
+
+***Be sure to build the uv environment before running the function on the included test datafile, unless you want to install everything yourself :B***
+
+Naming conventions are as listed in the example data: 600.tiff == 6 degrees collimated offset.
+
+File tree is organized as follows:
 
 ### circlefinder/
 * main.py - execution file, most tweaks happen here
@@ -12,4 +19,4 @@ Intended to be paired with optical table capable of producing a collimated beam 
 * postproc.py - a bunch of matplotlib functions, some useful some not. functions of importance are plot_hwhm_channels and plot_stats. everything else is largely experimental
 
 
-Anthropic's Claude and Google's Gemini were used for generating matplotlib functions and general debugging passes. All code drafted by me (Simon) unless otherwise credited.
+*Anthropic's Claude and Google's Gemini were used for generating matplotlib functions and general debugging passes. All code drafted by me (Simon) unless otherwise credited.*
