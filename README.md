@@ -11,8 +11,13 @@ Prerequisites: Python >= 3.10, working uv installation on system, MacOS/Linux te
 After cloning and opening terminal in the repo directory:
    ```
    uv sync
-   source .venv/bin/activate
    uv run main.py
+   ```
+OR, alternatively:
+   ```
+   uv sync
+   source .venv/bin/activate
+   python main.py
    ```
 These commands should build the environment and run the default analysis of the provided files in `data/` if all prerequisites are met.
 
