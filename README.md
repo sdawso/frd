@@ -9,7 +9,15 @@ An example of a collimated annulus input frame -- 7 degrees offset, output face 
 ![ringo](data/readme_img.jpg)
 
 v.s. what the pipeline sees:
+
+postproc.plot_2d_contours:
 ![rango](data/readme_img_1.jpg)
+
+postproc.plot_stats:
+![rongo](data/700_profiles.jpg)
+
+postproc.plot_hwhm_channels: (note the divergence in the last frame!)
+![rungo](data/700_analysis.jpg)
 
 ***Be sure to build the uv environment before running the pipeline on the included test datafile, unless you want to install everything yourself :B***
 
