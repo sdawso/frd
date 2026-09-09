@@ -1,8 +1,8 @@
-# Circlefinder -- algorithmic FRD analysis of multimodal fiber optics
+# Circlefinder -- Algorithmic FRD analysis of multimodal fiber optics
 ### Created by: Simon Dawson -- sdawso@uw.edu
 
-Fiber optic signal analysis for characterization of focal ratio degradation in a wide array of fibers, 
-Intended to be paired with optical table capable of producing a collimated beam annulus on a bare CCD sensor of choice.
+This software was made for fiber optic signal analysis and characterization of focal ratio degradation in a wide array of fibers, 
+It is intended to be paired with optical table capable of producing a collimated beam annulus on a bare CCD sensor of choice.
 
 [An example of conducting a collimated beam FRD test (not exactly this setup but conceptually similar)](https://opg.optica.org/viewmedia.cfm?r=1&rwjcode=ao&URI=ao-55-25-6829&seq=0&origin=search)
 
