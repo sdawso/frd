@@ -5,7 +5,18 @@ Intended to be paired with optical table capable of producing a collimated beam 
 
 [An example of conducting a collimated beam FRD test (not exactly this setup but conceptually similar)](https://opg.optica.org/viewmedia.cfm?r=1&rwjcode=ao&URI=ao-55-25-6829&seq=0&origin=search)
 
-An example of a collimated annulus input frame -- 7 degrees offset, output face ~9 mm from CCD:
+### Quick Start
+Prerequisites: Python >= 3.10, working uv installation on system, MacOS/Linux terminal (for this guide).
+
+After cloning and opening terminal in the repo directory:
+   ```
+   uv sync
+   source .venv/bin/activate
+   uv run main.py
+   ```
+These commands should build the environment and run the default analysis of the provided files in `data/` if all prerequisites are met.
+
+### An example of a collimated annulus input frame -- 7 degrees offset, output face ~9 mm from CCD:
 
 what you see:
 ![ringo](data/readme_img.jpg)
@@ -15,7 +26,7 @@ v.s. what the pipeline sees:
 postproc.plot_2d_contours:
 ![rango](data/readme_img_1.jpg)
 
-full control-2 example run:
+full control-2 example run (result of Quick Start above):
 
 postproc.plot_stats:
 ![rongo](data/700_profiles.jpg)
@@ -27,9 +38,9 @@ postproc.plot_hwhm_channels: (note the divergence in the last frame!)
 
 Naming conventions are as listed in the example data: 600.tiff == 6 degrees collimated offset. Input a series of annuli like the one above at increasing collimated offset and the approximate distance from fiber output to CCD. Data is assumed to be taken at same exposure settings with CCD/output face/input face in a fixed relative orientation. The only thing that moves between frames is the beam.
 
-File tree is organized as follows:
+### File tree is organized as follows:
 
-### circlefinder/
+circlefinder/
 * main.py - execution file, most tweaks happen here
   * Below is the block you mostly want to focus on tweaking, unless making more significant changes:
     ```python
