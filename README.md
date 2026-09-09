@@ -36,7 +36,7 @@ v.s. what the pipeline sees:
 postproc.plot_2d_contours:
 ![rango](data/readme_img_1.jpg)
 
-### Full control-2 example run with all 8 frames (result of Quick Start above):
+### Full control-2 example run with all 8 frames, from 5-12 degrees (result of Quick Start above):
 
 postproc.plot_stats:
 ![rongo](data/700_profiles.jpg)
