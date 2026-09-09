@@ -15,6 +15,8 @@ v.s. what the pipeline sees:
 postproc.plot_2d_contours:
 ![rango](data/readme_img_1.jpg)
 
+full control-2 example run:
+
 postproc.plot_stats:
 ![rongo](data/700_profiles.jpg)
 
