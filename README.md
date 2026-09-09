@@ -24,7 +24,7 @@ These commands should build the environment and run the default analysis of the 
 
 ***Be sure to build the uv environment before running the pipeline on the included test datafile, unless you want to install everything yourself :B***
 
-Naming conventions are as listed in the example data: 600.tiff == 6 degrees collimated offset. Input is a series of annuli images like the one above, made at increasing collimated offsets, and an approximate distance from the fiber output face to CCD surface. Data is assumed to be taken at same exposure settings with CCD/output face/input face in a fixed relative orientation, and the sensor is unlensed. **The only thing that moves between annular frames is the input beam.**
+Naming conventions are as listed in the example data: 600.tiff == 6 degrees collimated offset. Input is a series of annuli images like the one below, made at increasing collimated offsets, and an approximate distance from the fiber output face to CCD surface. Data is assumed to be taken at same exposure settings with CCD/output face/input face in a fixed relative orientation, and the sensor is unlensed. **The only thing that moves between annular frames is the input beam.**
 
 ### An example of a collimated annulus input frame -- 7 degrees offset, output face ~9 mm from CCD:
 
