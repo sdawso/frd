@@ -423,8 +423,7 @@ def circlefinder(img_path, detection_sigma=3.0, crest_sigma=3.0, dark_path=None,
     ang_p = np.arctan2(yr, xr)
     r_ideal = 1.0 / np.sqrt((np.cos(ang_p) / a) ** 2 + (np.sin(ang_p) / b) ** 2)
     contour_rms = float(np.sqrt(np.mean((np.hypot(xr, yr) - r_ideal) ** 2)))
-
-    # Return the empirical average wedge EE alongside the image metadata
+    
     return (cx, cy), (d1, d2), angle, img_sub, contour_rms, ee_wedge_avg, r_px_master
 
 def _ring_moffat_fit(fit_data, x_coords, peak_r, ee_integration_radius=None,
