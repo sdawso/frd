@@ -47,8 +47,6 @@ File tree is organized as follows:
     ```
     You should see the logger output the correct series of angles corresponding to your data if everything runs well. Example log using control-2:
     ```console
-    DEBUG wrapper: CACHEDIR=/Users/bro/.matplotlib
-    DEBUG _load_fontmanager: Using fontManager instance from /Users/bro/.matplotlib/fontlist-v390.json
     INFO <module>: Processing control-2-g1-e400k-9mm
     INFO <module>:   [*] Found input angles: [ 5.  6.  7.  8.  9. 10. 11. 12.]
     ```
