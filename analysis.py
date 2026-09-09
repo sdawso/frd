@@ -104,8 +104,6 @@ def _find_primary_peak(prof, stderr):
     # calculate noise floor
     fin = stderr[np.isfinite(stderr)]
     noise_floor = np.median(fin) if fin.size else 0.0
-
-    # Use Block 2's safe lower bound, but keep Block 1's warning trigger
     prom = max((3.0 * noise_floor), 1e-12)
     if prom == 1e-12 and logger:
         logger.warning("Prominence of peaks estimated to be zero, stderr has collapsed")
