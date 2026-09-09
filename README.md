@@ -80,4 +80,4 @@ circlefinder/
 
 ---
 
-*Claude Sonnet 5.1, Opus 5, and Gemini Pro 3.1 were used in this repository for generating matplotlib functions and general debugging passes via Goose and Antigravity IDEs. All code conceptualized, drafted, edited, and finalized by me (Simon) unless otherwise credited.*
+*Claude Sonnet 5.1, Opus 5, and Gemini Pro 3.1 were used in this repository for generating matplotlib functions and general debugging passes via Goose and Antigravity IDEs. All code conceptualized, drafted, edited, and finalized by hand by me (Simon) unless otherwise credited.*
