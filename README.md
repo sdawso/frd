@@ -1,3 +1,5 @@
+Created by: Simon Dawson -- sdawso@uw.edu
+
 Fiber optic signal analysis for characterization of focal ratio degradation in a wide array of fibers, 
 Intended to be paired with optical table capable of producing a collimated beam annulus on a bare CCD sensor of choice.
 
@@ -6,7 +8,7 @@ Intended to be paired with optical table capable of producing a collimated beam 
 An example of a collimated annulus input frame -- 7 degrees offset, output face ~9 mm from CCD:
 ![ringo](data/readme_img.jpg)
 
-v.s. what the function sees:
+v.s. what the pipeline sees:
 ![rango](data/readme_img_1.jpg)
 
 ***Be sure to build the uv environment before running the pipeline on the included test datafile, unless you want to install everything yourself :B***
@@ -47,6 +49,7 @@ File tree is organized as follows:
 * input.py - intake and reduction functions
 * analysis.py - annular contour generation, elliptical change-of-basis and crest data analysis, radial profile generation. meat and potatoes file
 * postproc.py - a bunch of matplotlib functions, some useful some not. functions of importance are plot_hwhm_channels and plot_stats. everything else is largely experimental
+* data/control-2-g1-e400k-9mm/ - a demonstrative series of input images and darks with very good quality, except for the last frame
 
 
-*Anthropic's Claude and Google's Gemini were used for generating matplotlib functions and general debugging passes. All code drafted by me (Simon) unless otherwise credited.*
+*Anthropic's Claude and Google's Gemini were used in this repository for generating matplotlib functions and general debugging passes. All code drafted by me (Simon) unless otherwise credited.*
