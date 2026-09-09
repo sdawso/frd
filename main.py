@@ -89,7 +89,7 @@ if __name__ == '__main__':
         ang = input_angles if plot_full_fibers else [input_angles[2]]
         for res, a in zip(sel, ang):
             if res is not None:
-                postproc.plot_2d_annulus_contours(res, title=f"{fiber} {a}° 2D Annulus Contours")
+                postproc.plot_2d_contours(res, title=f"{fiber} {a}° 2D Annulus Contours")
 
         postproc.plot_hwhm_channels(sel, ang, title_prefix=f"{fiber} ",
                                     show_ee=True, camera_dist_mm=camera_dist_mm)

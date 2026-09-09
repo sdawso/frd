@@ -313,7 +313,7 @@ def plot_hwhm_channels(results, angles, pixel_size_mm=PIXEL_SIZE_MM, camera_dist
     plt.close(fig)
 
 
-def plot_2d_annulus_contours(result, title="2D Planar Intensity with Contours", save_path=None):
+def plot_2d_contours(result, title="2D Planar Intensity with Contours", save_path=None):
 
     logger.debug(f"Starting 2D planar rendering for '{title}'...")
 
