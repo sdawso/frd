@@ -78,7 +78,6 @@ circlefinder/
 * postproc.py - a bunch of matplotlib functions, some useful some not. functions of importance are plot_hwhm_channels and plot_stats. everything else is largely experimental
 * data/control-2-g1-e400k-9mm/ - a demonstrative series of input images and darks with very good quality, except for the last frame
 
-\n
-\n
+---
 
 *Claude Sonnet 5.1, Opus 5, and Gemini Pro 3.1 were used in this repository for generating matplotlib functions and general debugging passes via Goose and Antigravity IDEs. All code conceptualized, drafted, edited, and finalized by me (Simon) unless otherwise credited.*
