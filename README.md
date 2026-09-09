@@ -22,6 +22,10 @@ OR, alternatively:
    ```
 These commands should build the environment and run the default analysis of the provided files in `data/` if all prerequisites are met.
 
+***Be sure to build the uv environment before running the pipeline on the included test datafile, unless you want to install everything yourself :B***
+
+Naming conventions are as listed in the example data: 600.tiff == 6 degrees collimated offset. Input a series of annuli like the one above at increasing collimated offset and the approximate distance from fiber output to CCD. Data is assumed to be taken at same exposure settings with CCD/output face/input face in a fixed relative orientation. The only thing that moves between frames is the beam.
+
 ### An example of a collimated annulus input frame -- 7 degrees offset, output face ~9 mm from CCD:
 
 what you see:
@@ -39,10 +43,6 @@ postproc.plot_stats:
 
 postproc.plot_hwhm_channels: (note the divergence in the last frame!)
 ![rungo](data/700_analysis.jpg)
-
-***Be sure to build the uv environment before running the pipeline on the included test datafile, unless you want to install everything yourself :B***
-
-Naming conventions are as listed in the example data: 600.tiff == 6 degrees collimated offset. Input a series of annuli like the one above at increasing collimated offset and the approximate distance from fiber output to CCD. Data is assumed to be taken at same exposure settings with CCD/output face/input face in a fixed relative orientation. The only thing that moves between frames is the beam.
 
 ### File tree is organized as follows:
 
