@@ -1,4 +1,5 @@
-Created by: Simon Dawson -- sdawso@uw.edu
+# Circlefinder -- algorithmic FRD analysis of multimodal fiber optics
+### Created by: Simon Dawson -- sdawso@uw.edu
 
 Fiber optic signal analysis for characterization of focal ratio degradation in a wide array of fibers, 
 Intended to be paired with optical table capable of producing a collimated beam annulus on a bare CCD sensor of choice.
