@@ -62,4 +62,4 @@ File tree is organized as follows:
 * data/control-2-g1-e400k-9mm/ - a demonstrative series of input images and darks with very good quality, except for the last frame
 
 
-*Anthropic's Claude and Google's Gemini were used in this repository for generating matplotlib functions and general debugging passes. All code drafted by me (Simon) unless otherwise credited.*
+*Anthropic's Claude and Google's Gemini were used in this repository for generating matplotlib functions and general debugging passes using Goose and Antigravity. All code drafted, edited, and finalized by me (Simon) unless otherwise credited.*
