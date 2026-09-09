@@ -104,8 +104,6 @@ def _find_primary_peak(prof, stderr):
     # calculate noise floor
     fin = stderr[np.isfinite(stderr)]
     noise_floor = np.median(fin) if fin.size else 0.0
-
-    # Use Block 2's safe lower bound, but keep Block 1's warning trigger
     prom = max((3.0 * noise_floor), 1e-12)
     if prom == 1e-12 and logger:
         logger.warning("Prominence of peaks estimated to be zero, stderr has collapsed")
@@ -423,8 +421,7 @@ def circlefinder(img_path, detection_sigma=3.0, crest_sigma=3.0, dark_path=None,
     ang_p = np.arctan2(yr, xr)
     r_ideal = 1.0 / np.sqrt((np.cos(ang_p) / a) ** 2 + (np.sin(ang_p) / b) ** 2)
     contour_rms = float(np.sqrt(np.mean((np.hypot(xr, yr) - r_ideal) ** 2)))
-
-    # Return the empirical average wedge EE alongside the image metadata
+    
     return (cx, cy), (d1, d2), angle, img_sub, contour_rms, ee_wedge_avg, r_px_master
 
 def _ring_moffat_fit(fit_data, x_coords, peak_r, ee_integration_radius=None,
@@ -521,8 +518,7 @@ def _ring_moffat_fit(fit_data, x_coords, peak_r, ee_integration_radius=None,
 def profile_analysis(image_path, dark_path=None, bin_step=5.0, num_slices=10,
                      shared_center=None, ee_integration_radius=None, debounce_px=20):
     logger.debug(f"Processing: {image_path}")
-
-    # Unpack the new empirical ee arrays from circlefinder
+    
     (cxf, cyf), axes_, angle, image_sub, contour_rms, ee_emp, ee_r_px = circlefinder(
         image_path, dark_path=dark_path)
 
@@ -564,16 +560,13 @@ def profile_analysis(image_path, dark_path=None, bin_step=5.0, num_slices=10,
 
     prof_aligned = np.median(_stack(True), axis=0)
     prof_unaligned = np.median(_stack(False), axis=0)
-
-    # Replaced redundant _empirical_hwhm and _median_profile_hwhm calls
-    # utilizing the unified crossing logic:
+    
     master_peak = int(np.argmax(prof_aligned))
     left_deltas, right_deltas, pk_m = _hwhm_crossings(
         prof_aligned, r_master, master_peak,
         debounce_px=debounce_px, bin_step=bin_step
     )
-
-    # Compute h_emp as the average of the inner-most crossing deltas
+    
     l_val = left_deltas[0] if len(left_deltas) > 0 else np.nan
     r_val = right_deltas[0] if len(right_deltas) > 0 else np.nan
     h_emp = np.nanmean([l_val, r_val])
@@ -628,8 +621,7 @@ def profile_analysis(image_path, dark_path=None, bin_step=5.0, num_slices=10,
     ap = np.hypot(x - cx, y - cy) <= mean_peak_r + 6 * fit_a.params['sigma'].value
     _, bkg_med, _ = sigma_clipped_stats(image_sub[~ap], sigma=3.0)
     total_flux = float(np.sum(image_sub[ap] - bkg_med))
-
-    # Calculate both 95% radii
+    
     ee95_moffat = float(np.interp(0.95, ee_m, r_th))
     ee95_emp = float(np.interp(0.95, ee_emp, ee_r_px)) if ee_emp is not None else np.nan
 
