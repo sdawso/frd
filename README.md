@@ -50,7 +50,7 @@ File tree is organized as follows:
     INFO <module>: Processing control-2-g1-e400k-9mm
     INFO <module>:   [*] Found input angles: [ 5.  6.  7.  8.  9. 10. 11. 12.]
     ```
-    The software should take it from there, god willing
+    The software should take it from there. hopefully
     
 * input.py - intake and reduction functions
 * analysis.py - annular contour generation, elliptical change-of-basis and crest data analysis, radial profile generation. meat and potatoes file
