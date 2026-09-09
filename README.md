@@ -8,7 +8,7 @@ Intended to be paired with optical table capable of producing a collimated beam 
 An example of a collimated annulus input frame -- 7 degrees offset, output face ~9 mm from CCD:
 ![ringo](data/readme_img.jpg)
 
-v.s. what the function sees:
+v.s. what the pipeline sees:
 ![rango](data/readme_img_1.jpg)
 
 ***Be sure to build the uv environment before running the pipeline on the included test datafile, unless you want to install everything yourself :B***
