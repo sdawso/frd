@@ -9,40 +9,15 @@ import analysis
 logging.basicConfig(level=logging.DEBUG, format="%(levelname)s %(funcName)s: %(message)s")
 logger = logging.getLogger(__name__)
 
-PIXEL_SIZE_MM = 4.8e-3
-CAMERA_DIST_MM = 10.0
-
-def _px_to_deg(r_px, pixel_size_mm=PIXEL_SIZE_MM, camera_dist_mm=CAMERA_DIST_MM):
-    return np.degrees(np.arctan((np.asarray(r_px, dtype=float) * pixel_size_mm) / camera_dist_mm))
-
-
-def _plot_measured(ax, x, y, yerr, marker, color, edge, label, **kwargs):
-    if yerr is not None:
-        ax.errorbar(x, y, yerr=yerr, fmt=marker, color=color, markeredgecolor=edge,
-                    capsize=3, zorder=5, label=label, **kwargs)
-    else:
-        ax.scatter(x, y, marker=marker, color=color, edgecolors=edge,
-                   zorder=5, label=label, **kwargs)
-
-
-def _plot_deltas(ax, peak_r, deltas, sign, x_px, y_data, color, **kwargs):
-    if deltas is None or len(deltas) == 0 or peak_r is None:
-        return False
-    x_cross = peak_r + sign * np.asarray(deltas, dtype=float)
-    ax.plot(x_cross, np.interp(x_cross, x_px, y_data), color, **kwargs)
-    return True
-
-
-_HWHM_SIDES = (
-    (-1, 'dodgerblue', 'navy', '<', 'Left'),
-    (+1, 'crimson', 'darkred', '>', 'Right'),
-)
-
-
 def plot_stats(input_angles, sigma_deg=None, sigma_err=None,
                hwhm_left_deg=None, hwhm_right_deg=None,
                flux_rel=None, image=None, title_prefix="",
-               med_hwhm_left_deg=None, med_hwhm_right_deg=None,):
+               med_hwhm_left_deg=None, med_hwhm_right_deg=None):
+
+    _hwhm_sides = {
+        'left': [-1, 'dodgerblue', 'navy', '<'],
+        'right': [+1, 'crimson', 'darkred', '>']
+    }
 
     logger.debug(f"Starting setup for {title_prefix}")
     plots = []
@@ -76,9 +51,14 @@ def plot_stats(input_angles, sigma_deg=None, sigma_err=None,
 
                 x_fit = np.linspace(x_val.min(), x_val.max(), 100)
                 ax.plot(x_fit, m * x_fit + c, 'r-', lw=2, zorder=4,
-                        label=f'Fit\nSlope = {m:.5e} ± {m_err:.5e}°/°')
+                        label=f'Fit Slope = {m:3e} ± {m_err:.3e}°/°')
 
-        _plot_measured(ax, input_angles, sigma_deg, sigma_err, 'D', 'steelblue', 'navy', 'Moffat σ')
+        if sigma_err is not None:
+            ax.errorbar(input_angles, sigma_deg, yerr=sigma_err, fmt='D', color='steelblue',
+                        capsize = 3, label = 'Moffat σ')
+        else:
+            ax.scatter(input_angles, sigma_deg, marker='D', color='steelblue', label = 'Moffat σ')
+
         ax.set(xlabel='Input angle (°)', ylabel='Ring σ (°)', title=f'{title_prefix}Broadening')
         ax.legend()
 
@@ -88,7 +68,7 @@ def plot_stats(input_angles, sigma_deg=None, sigma_err=None,
         x_unique = np.asarray(input_angles)
         pk = np.zeros(len(x_unique))
 
-        for hwhm_deg, (sign, color, edge, marker, side) in zip((hwhm_left_deg, hwhm_right_deg), _HWHM_SIDES):
+        for (hwhm_deg, (side, (sign, color, edge, marker))) in zip((hwhm_left_deg, hwhm_right_deg), _hwhm_sides.items()):
             if hwhm_deg is None:
                 continue
 
@@ -116,7 +96,7 @@ def plot_stats(input_angles, sigma_deg=None, sigma_err=None,
                 ax.scatter(x_pts, y_pts, marker=marker, color=color, edgecolors=edge,
                            zorder=5, label=f'{side} HWHM Δr')
 
-        for med_deg, (sign, _, _, _, side) in zip((med_hwhm_left_deg, med_hwhm_right_deg), _HWHM_SIDES):
+        for med_deg, (sign, _, _, _, side) in zip((med_hwhm_left_deg, med_hwhm_right_deg), _hwhm_sides):
             if med_deg is None:
                 continue
             valid = ~np.isnan(med_deg)
@@ -212,7 +192,7 @@ def plot_eccentricity(results, angles, title_prefix=""):
     return fig
 
 
-def plot_hwhm_channels(results, angles, pixel_size_mm=PIXEL_SIZE_MM, camera_dist_mm=CAMERA_DIST_MM,
+def plot_hwhm_channels(results, angles, pixel_size_mm=2.4e-3, camera_dist_mm=10,
                        ax1_x0=None, ax1_x1=None, ax2_x0=None, ax2_x1=None,
                        title_prefix="", show_ee=True):
     logger.debug(f"Setting up subplots for {title_prefix}")
@@ -225,6 +205,13 @@ def plot_hwhm_channels(results, angles, pixel_size_mm=PIXEL_SIZE_MM, camera_dist
     nrows = 2 if show_ee else 1
     fig, axes = plt.subplots(nrows, N, figsize=(8 * N, 8 * nrows), tight_layout=True)
     axes = np.atleast_1d(axes).reshape(nrows, N)
+
+    def _plot_deltas(ax, peak_r, deltas, sign, x_px, y_data, color, **kwargs):
+        if deltas is None or len(deltas) == 0 or peak_r is None:
+            return False
+        x_cross = peak_r + sign * np.asarray(deltas, dtype=float)
+        ax.plot(x_cross, np.interp(x_cross, x_px, y_data), color, **kwargs)
+        return True
 
     for i, (result, ang) in enumerate(valid_data):
         logger.debug(f"Processing subplot for angle {ang}...")
@@ -292,6 +279,10 @@ def plot_hwhm_channels(results, angles, pixel_size_mm=PIXEL_SIZE_MM, camera_dist
             ('ee', 'ee_r_theoretical', 'blue', '-', 'Moffat', 'bo'),
             ('ee_empirical', 'ee_r_px', 'purple', '--', 'Empirical', 'ro'),
         )
+
+        def _px_to_deg(r_px, psmm=pixel_size_mm, cdmm=camera_dist_mm):
+            return np.degrees(np.arctan((np.asarray(r_px, dtype=float) * psmm) / cdmm))
+
         for y_key, x_key, color, style, name, marker in ee_curves:
             y_ee, x_ee_px = result.get(y_key), result.get(x_key)
             if y_ee is None or x_ee_px is None:
