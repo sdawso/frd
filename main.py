@@ -29,15 +29,18 @@ if __name__ == '__main__':
     for fiber in fiber_names:
         logger.info(f"Processing {fiber}")
         fiber_dir = base_dir / fiber
+
         m = re.search(r'(\d+(?:\.\d+)?)mm', fiber.replace('_', '-'))
         camera_dist_mm = float(m.group(1)) if m else 10.6
-        angle_files = np.array(sorted(
-            int(p.stem) for p in fiber_dir.glob('*.tiff') if p.stem.isdigit()))
+
+        angle_files = np.array(sorted(int(p.stem) for p in fiber_dir.glob('*.tiff') if p.stem.isdigit()))
         input_angles = angle_files / 100.0
         logger.info(f"  [*] Found input angles: {input_angles}")
+
         master_dark, _ = input._master_reduction(fiber_dir, prefix="dark")
         if master_dark is None:
             logger.warning(f"{fiber}: no dark frames found, proceeding uncalibrated")
+
         paths = [fiber_dir / f"{a}.tiff" for a in angle_files]
 
         # pass 1: shared center
@@ -49,10 +52,12 @@ if __name__ == '__main__':
                 centers.append((c_x, c_y))
             except (FileNotFoundError, ValueError) as e:
                 logger.debug(f"Center pass skipped {p.name}: {e}")
+
         if not centers:
             logger.warning(f"  [!] Skipped {fiber}: no valid centers")
             all_results[fiber] = [None] * len(paths)
             continue
+
         shared_center = tuple(np.median(np.array(centers), axis=0))
         logger.info(f"  [*] Shared center: {shared_center}")
 
@@ -61,8 +66,7 @@ if __name__ == '__main__':
         for p in paths:
             logger.info(f"Analyzing {p.name}")
             try:
-                res = analysis.profile_analysis(str(p), dark_path=master_dark,
-                                       shared_center=shared_center)
+                res = analysis.profile_analysis(str(p), dark_path=master_dark, shared_center=shared_center)
                 results.append(res)
 
             except (FileNotFoundError, ValueError) as e:
@@ -85,6 +89,7 @@ if __name__ == '__main__':
         results, frd = all_results[fiber], frd_results.get(fiber)
         if frd is None:
             continue
+
         sel = results if plot_full_fibers else [results[2]]
         ang = input_angles if plot_full_fibers else [input_angles[2]]
         for res, a in zip(sel, ang):
