@@ -100,6 +100,5 @@ if __name__ == '__main__':
                             hwhm_right_deg=frd['hwhm_right_deg'],
                             med_hwhm_left_deg=frd['med_hwhm_left_deg'],
                             med_hwhm_right_deg=frd['med_hwhm_right_deg'],
-                            theta_peak_deg=unp.nominal_values(frd['theta_peak_deg']),
                             )
 
