@@ -1,7 +1,9 @@
 import cv2
 import logging
 import numpy as np
+import pickle
 import uncertainties.unumpy as unp
+from pathlib import Path
 from uncertainties import ufloat
 from astropy.stats import sigma_clipped_stats
 from astropy.table import Table
@@ -299,10 +301,28 @@ def _ring_xy_coordinates(r_polar, theta_deg, center, axes, angle_deg):
 
 def circlefinder(img_path, detection_sigma=3.0, crest_sigma=3.0, dark_path=None,
                  max_iter=3, crest_bin_px=10.0, tol_px=0.1,
-                 n_wedge=72, min_crest_px=5.0, min_ring_px=10.0):
+                 n_wedge=72, min_crest_px=5.0, min_ring_px=10.0,
+                 use_cache=None, regenerate_cache=None, cache_name=".cache"):
     """
 
     """
+
+    img_file = Path(img_path)
+    cache_dir = img_file.parent / cache_name
+    if isinstance(dark_path, np.ndarray):
+        dark_key = "dark"
+    elif dark_path is not None:
+        dark_key = Path(dark_path).name
+    else:
+        dark_key = "nodark"
+    key = (f"{img_file.stem}_circlefinder_{dark_key}_{detection_sigma}_{crest_sigma}_"
+           f"{max_iter}_{crest_bin_px}_{tol_px}_{n_wedge}_{min_crest_px}_{min_ring_px}")
+    cache_path = cache_dir / f"{key}.pkl"
+
+    if use_cache and not regenerate_cache and cache_path.exists():
+        logger.info(f"Loading cached circlefinder result: {cache_path}")
+        with open(cache_path, 'rb') as f:
+            return pickle.load(f)
 
     wedge_deg = 360.0 / n_wedge
 
@@ -421,8 +441,17 @@ def circlefinder(img_path, detection_sigma=3.0, crest_sigma=3.0, dark_path=None,
     ang_p = np.arctan2(yr, xr)
     r_ideal = 1.0 / np.sqrt((np.cos(ang_p) / a) ** 2 + (np.sin(ang_p) / b) ** 2)
     contour_rms = float(np.sqrt(np.mean((np.hypot(xr, yr) - r_ideal) ** 2)))
-    
-    return (cx, cy), (d1, d2), angle, img_sub, contour_rms, ee_wedge_avg, r_px_master
+
+    result = ((cx, cy), (d1, d2), angle, img_sub, contour_rms, ee_wedge_avg, r_px_master)
+
+    # dump result to .cache/ if none loaded (default: use_cache=True)
+    if use_cache:
+        cache_dir.mkdir(exist_ok=True)
+        with open(cache_path, 'wb') as f:
+            pickle.dump(result, f)
+        logger.info(f"{img_path}: cached to {cache_path}")
+
+    return result
 
 def _ring_moffat_fit(fit_data, x_coords, peak_r, ee_integration_radius=None,
                      weights=None, hwhm_seed_px=None, fit_window=None):
@@ -516,11 +545,12 @@ def _ring_moffat_fit(fit_data, x_coords, peak_r, ee_integration_radius=None,
 
 
 def profile_analysis(image_path, dark_path=None, bin_step=5.0, num_slices=10,
-                     shared_center=None, ee_integration_radius=None, debounce_px=20):
+                     shared_center=None, ee_integration_radius=None, debounce_px=20,
+                     use_cache=None, regenerate_cache=None):
     logger.debug(f"Processing: {image_path}")
     
     (cxf, cyf), axes_, angle, image_sub, contour_rms, ee_emp, ee_r_px = circlefinder(
-        image_path, dark_path=dark_path)
+        image_path, dark_path=dark_path, use_cache=use_cache, regenerate_cache=regenerate_cache)
 
     cx, cy = shared_center if shared_center is not None else (cxf, cyf)
 
@@ -609,8 +639,6 @@ def profile_analysis(image_path, dark_path=None, bin_step=5.0, num_slices=10,
 
     y, x = np.indices(image_sub.shape)
     ih, iw = image_sub.shape[:2]
-    if (iw, ih) != (5472, 3648):
-        logger.warning(f"Frame {iw}x{ih} not native 5472x3648")
     r_full = float(min(cx, cy, iw - cx, ih - cy))
     w_fit = fit_a.params['sigma'].value
     coverage_ok = bool(mean_peak_r + 4.0 * w_fit <= r_full)
@@ -622,8 +650,10 @@ def profile_analysis(image_path, dark_path=None, bin_step=5.0, num_slices=10,
     _, bkg_med, _ = sigma_clipped_stats(image_sub[~ap], sigma=3.0)
     total_flux = float(np.sum(image_sub[ap] - bkg_med))
     
-    ee95_moffat = float(np.interp(0.95, ee_m, r_th))
-    ee95_emp = float(np.interp(0.95, ee_emp, ee_r_px)) if ee_emp is not None else np.nan
+    ee85_moffat = float(np.interp(0.85, ee_m, r_th))
+    ee85_emp = float(np.interp(0.85, ee_emp, ee_r_px)) if ee_emp is not None else np.nan
+    ee15_moffat = float(np.interp(0.15, ee_m, r_th))
+    ee15_emp = float(np.interp(0.15, ee_emp, ee_r_px)) if ee_emp is not None else np.nan
 
     return {
         'center': (cx, cy), 'axes': axes_, 'angle': angle, 'image': image_sub,
@@ -632,9 +662,12 @@ def profile_analysis(image_path, dark_path=None, bin_step=5.0, num_slices=10,
 
         'ee_empirical': ee_emp,
         'ee_r_px': ee_r_px,
-        'ee95_radius_moffat': ee95_moffat,
-        'ee95_radius_emp': ee95_emp,
-        'ee95_ratio': float(ee95_emp / ee95_moffat) if ee95_moffat > 0 else np.nan,
+        'ee85_radius_moffat': ee85_moffat,
+        'ee85_radius_emp': ee85_emp,
+        'ee15_moffat': ee15_moffat,
+        'ee15_emp': ee15_emp,
+        'ee85_ratio': float(ee85_emp / ee85_moffat) if ee85_moffat > 0 else np.nan,
+        'ee15_ratio': float(ee15_emp/ ee15_moffat) if ee15_moffat > 0 else np.nan,
 
         'result': fit_a, 'result_unaligned': fit_u,
         'sigma': fit_a.params['sigma'].value, 'sigma_err': sigma_err,
@@ -644,7 +677,7 @@ def profile_analysis(image_path, dark_path=None, bin_step=5.0, num_slices=10,
         'r_full_px': r_full, 'coverage_ok': coverage_ok,
         'beta': fit_a.params['beta'].value,
         'beta_err': fit_a.params['beta'].stderr or 0.0,
-        'ee95_radius': ee95_moffat,
+        'ee85_radius': ee85_moffat,
         'ee_truncation_sensitivity': trunc,
         'hwhm_px': diag_a['hwhm_px'],
         'hwhm_err_px': diag_a['hwhm_err_px'], # covariance-only
@@ -662,7 +695,7 @@ def profile_analysis(image_path, dark_path=None, bin_step=5.0, num_slices=10,
     }
 
 
-def calculate_frd(results, input_angles, pixel_size=4.8e-3, d_tol=0.10,
+def calculate_frd(results, input_angles, pixel_size=2.4e-3, d_tol=0.10,
                   camera_dist_mm=10.0, core_D_um = 150.0, collimator_f_mm = 18.24):
 
     input_angles = np.array(input_angles, dtype=float)
@@ -700,27 +733,37 @@ def calculate_frd(results, input_angles, pixel_size=4.8e-3, d_tol=0.10,
         ((unp.nominal_values(peak_px) + sigma_unaligned_px) * pixel_size
          - r0.nominal_value) / D.nominal_value)) - unp.nominal_values(theta_peak)
 
-    ee95_moffat_px = np.array([ufloat(r['ee95_radius_moffat'],
-                                      r['ee95_radius_moffat'] * r['ee_truncation_sensitivity']
+    ee85_moffat_px = np.array([ufloat(r['ee85_radius_moffat'],
+                                      r['ee85_radius_moffat'] * r['ee_truncation_sensitivity']
                                       + r['peak_r_err']) if r
                                else ufloat(np.nan, np.nan) for r in results])
 
-    ee95_emp_px = np.array([ufloat(r['ee95_radius_emp'],
-                                   r['ee95_radius_emp'] * r['ee_truncation_sensitivity']
-                                   + r['peak_r_err']) if r and np.isfinite(r.get('ee95_radius_emp', np.nan))
+    ee85_emp_px = np.array([ufloat(r['ee85_radius_emp'],
+                                   r['ee85_radius_emp'] * r['ee_truncation_sensitivity']
+                                   + r['peak_r_err']) if r and np.isfinite(r.get('ee85_radius_emp', np.nan))
                             else ufloat(np.nan, np.nan) for r in results])
 
-    theta_out95_moffat = unp.degrees(unp.arctan((ee95_moffat_px * pixel_size - r0) / D))
-    theta_out95_emp = unp.degrees(unp.arctan((ee95_emp_px * pixel_size - r0) / D))
+    ee15_moffat_px = np.array([ufloat(r['ee15_moffat'],
+                                      r['ee15_moffat'] * r['ee_truncation_sensitivity']
+                                      + r['peak_r_err']) if r
+                               else ufloat(np.nan, np.nan) for r in results])
+
+    ee15_emp_px = np.array([ufloat(r['ee15_emp'],
+                                   r['ee15_emp'] * r['ee_truncation_sensitivity']
+                                   + r['peak_r_err']) if r and np.isfinite(r.get('ee15_radius_emp', np.nan))
+                            else ufloat(np.nan, np.nan) for r in results])
+
+    theta_out85_moffat = unp.degrees(unp.arctan((ee85_moffat_px * pixel_size - r0) / D))
+    theta_out85_emp = unp.degrees(unp.arctan((ee85_emp_px * pixel_size - r0) / D))
+    theta_out15_moffat = unp.degrees(unp.arctan((ee15_moffat_px * pixel_size - r0) / D))
+    theta_out15_emp = unp.degrees(unp.arctan((ee15_emp_px * pixel_size - r0) / D))
 
     f_in = 1 / (2 * tan_in)
 
-    f_out95_moffat = 1 / (2 * unp.tan(unp.radians(theta_out95_moffat)))
-    f_out95_emp = 1 / (2 * unp.tan(unp.radians(theta_out95_emp)))
-
-    tan_out95 = unp.tan(unp.radians(theta_out95_moffat))
-    tan_d = unp.sqrt(np.maximum(tan_out95 ** 2 - tan_in ** 2, 0))
-    theta_d = unp.degrees(unp.arctan(tan_d))
+    f_out85_moffat = 1 / (2 * unp.tan(unp.radians(theta_out85_moffat)))
+    f_out85_emp = 1 / (2 * unp.tan(unp.radians(theta_out85_emp)))
+    f_out15_moffat = 1 / (2 * unp.tan(unp.radians(theta_out15_moffat)))
+    f_out15_emp = 1 / (2 * unp.tan(unp.radians(theta_out15_emp)))
 
     flux = np.array([r['total_flux'] if r else np.nan for r in results])
     flux_rel = flux / np.nanmax(flux) if np.any(np.isfinite(flux)) else flux
@@ -757,19 +800,19 @@ def calculate_frd(results, input_angles, pixel_size=4.8e-3, d_tol=0.10,
     for a, r in zip(input_angles, results):
         d = r.get('fit_flags', {}) if r else {}
         ratio = r.get('hwhm_ratio', np.nan) if r else np.nan
-        ee_rat = r.get('ee95_ratio', np.nan) if r else np.nan
+        ee_rat = r.get('ee85_ratio', np.nan) if r else np.nan
 
         f = []
         if r:
             if d.get('collapsed'): f.append('COLLAPSED')
             if d.get('beta_railed'): f.append('BETA_RAIL')
-            if d.get('rms_frac', 0) > 0.05: f.append('RESID')
+            if d.get('rms_frac', 0) > 0.15: f.append('RESID')
             if d.get('slope_frac', 0) > 0.6: f.append('HALO')
             if d.get('q_fit', 0) > 0.4: f.append('Q_HI')
             if d.get('trunc_sens', 0) > 0.1: f.append('TRUNC')
-            if np.isfinite(ratio) and not 0.9 <= ratio <= 1.1:
+            if np.isfinite(ratio) and not 0.8 <= ratio <= 1.2:
                 f.append('RATIO')
-            if np.isfinite(ee_rat) and not 0.95 <= ee_rat <= 1.05:
+            if np.isfinite(ee_rat) and not 0.85 <= ee_rat <= 1.15:
                 f.append('EE_DIV')
 
         rows.append({
@@ -779,8 +822,8 @@ def calculate_frd(results, input_angles, pixel_size=4.8e-3, d_tol=0.10,
             'ratio': ratio,
             'beta': r['beta'] if r else np.nan,
             'redchi': d.get('redchi', np.nan),
-            'ee_mof': r.get('ee95_radius_moffat', np.nan) if r else np.nan,
-            'ee_emp': r.get('ee95_radius_emp', np.nan) if r else np.nan,
+            'ee_mof': r.get('ee85_radius_moffat', np.nan) if r else np.nan,
+            'ee_emp': r.get('ee85_radius_emp', np.nan) if r else np.nan,
             'ee_rat': ee_rat,
             'flags': ','.join(f) if f else ('ok' if r else 'NO FIT'),
         })
@@ -799,14 +842,17 @@ def calculate_frd(results, input_angles, pixel_size=4.8e-3, d_tol=0.10,
         'input_angles': input_angles,
         'theta_peak_deg': theta_peak,
 
-        'theta_out95_deg': theta_out95_moffat,
-        'theta_out95_emp_deg': theta_out95_emp,
+        'theta_out85_deg': theta_out85_moffat,
+        'theta_out85_emp_deg': theta_out85_emp,
+        'theta_out15_deg': theta_out15_moffat,
+        'theta_out15_emp_deg': theta_out15_emp,
 
-        'theta_d_deg': theta_d,
         'f_in': f_in,
 
-        'f_out95': f_out95_moffat,
-        'f_out95_emp': f_out95_emp,
+        'f_out85': f_out85_moffat,
+        'f_out85_emp': f_out85_emp,
+        'f_out15': f_out15_moffat,
+        'f_out15_emp': f_out15_emp,
 
         'sigma_deg': sigma_deg,
         'sigma_unaligned_deg': sigma_unaligned_deg,

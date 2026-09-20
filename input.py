@@ -1,11 +1,12 @@
 import logging
+import pickle
 from PIL import Image
 import numpy as np
 from astropy.stats import sigma_clip
 from scipy.ndimage import binary_opening, median_filter
 from pathlib import Path
 
-## set log level for compatibility with logging
+# set log level for compatibility with logging
 logging.basicConfig(level=logging.DEBUG, format="%(levelname)s %(funcName)s: %(message)s")
 logger = logging.getLogger(__name__)
 
@@ -20,10 +21,9 @@ def _master_reduction(master_path, res_sigma=3, prefix="", filetype="tiff"):
 
     :return: - master median, master standard deviation
     """
-    ## load and sigma clip data files per res_sigma
+    # load and sigma clip data files per res_sigma
     master_dir = Path(master_path)
-    files = [p for p in master_dir.glob(f'{prefix}*.{filetype}')
-             if p.is_file() and not p.stem.endswith("-bad")]
+    files = [p for p in master_dir.glob(f'{prefix}*.{filetype}') if p.is_file()]
     stack = []
     for p in files:
         try:
@@ -35,21 +35,20 @@ def _master_reduction(master_path, res_sigma=3, prefix="", filetype="tiff"):
         return None, None
     cube = np.stack(stack)
 
-    ## find master median
+    # find master median
     master_median = np.nanmedian(cube, axis=0).astype(np.float32)
     master_std = (np.nanstd(cube, axis=0) if len(stack) > 1
                   else np.zeros_like(master_median)).astype(np.float32)
 
-    ## filter out bad pixels
+    # filter out bad pixels
     bad = ~np.isfinite(master_median)
     if bad.any():
         master_median[bad] = np.nanmedian(master_median)
         master_std[bad] = np.nanmedian(master_std)
 
-    ## return statistical coefficient arrays (master image and error likelihood)
+    # return statistical coefficient arrays (master image and error likelihood)
     return master_median, master_std
 
-##
 def _load(frame, prefix="", filetype=""):
     """
     helper function to load an image, images, or reduced ndarray(s) depending on the input
@@ -71,15 +70,15 @@ def _load(frame, prefix="", filetype=""):
 
 ## accepts image and bias, dark, exposures -- add flat capability later
 ##
-def input_reduction(img_path, master_bias_in=None, master_dark_in=None,
-                    exp_time=None, dark_exp_time=None, filetype="tiff",
+def input_reduction(img_path, master_bias_in=None, master_dark_in=None, master_flat_in=None,
+                    master_exp_time=None, dark_exp_time=None, filetype="tiff",
                     saturation_adu=None):
     """
     returns a combined photometric reduction of science data using the above helper functions
     :param img_path: - path to input frames directory
     :param master_bias_in: - master bias (optional)
     :param master_dark_in: - master dark (optional)
-    :param exp_time: - exposure time (optional)
+    :param master_exp_time: - exposure time (optional)
     :param dark_exp_time: - dark exposure time (optional)
     :param filetype: - file type for input frames
     :param saturation_adu: - saturation adu (optional)
@@ -138,13 +137,26 @@ def input_reduction(img_path, master_bias_in=None, master_dark_in=None,
 
     bias = _load(master_bias_in, prefix="bias", filetype=filetype)
     dark = _load(master_dark_in, prefix="dark", filetype=filetype)
+    flat = _load(master_flat_in, prefix="flat", filetype=filetype)
 
     # apply bias and dark data
     if bias is not None:
         img -= bias
     if dark is not None:
         d = dark - bias if bias is not None else dark
-        scale = (exp_time / dark_exp_time) if (exp_time and dark_exp_time) else 1.0
+        if master_exp_time and dark_exp_time:
+            scale = master_exp_time / dark_exp_time
+        else:
+            scale = 1.0
+            if bool(master_exp_time) != bool(dark_exp_time):
+                logger.warning(f"{img_path}: dark scaling disabled (scale=1.0), assumed equal exposure to science data.")
         img -= d * scale
+    if flat is not None:
+        flat = flat - bias if bias is not None else flat
+        flat_trim = flat[100:-100,100:-100]
+        flat_mean = np.mean(flat_trim)
+        flat_norm = flat/flat_mean
+        flat_norm[flat == 0] = 1
+        img /= flat_norm
 
     return img, n_sat

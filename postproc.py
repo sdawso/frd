@@ -1,5 +1,5 @@
 import logging
-
+import uncertainties.unumpy as unp
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Ellipse
@@ -19,7 +19,6 @@ def plot_stats(input_angles, sigma_deg=None, sigma_err=None,
         'right': [+1, 'crimson', 'darkred', '>']
     }
 
-    logger.debug(f"Starting setup for {title_prefix}")
     plots = []
     if sigma_deg is not None: plots.append('sigma')
     if hwhm_left_deg is not None or hwhm_right_deg is not None: plots.append('hwhm')
@@ -34,7 +33,6 @@ def plot_stats(input_angles, sigma_deg=None, sigma_err=None,
     axes = {name: axes[i] for i, name in enumerate(plots)}
 
     if 'sigma' in plots:
-        logger.debug("Rendering 'sigma' subplot...")
         ax = axes['sigma']
 
         if flux_rel is not None and sigma_err is not None:
@@ -63,7 +61,6 @@ def plot_stats(input_angles, sigma_deg=None, sigma_err=None,
         ax.legend()
 
     if 'hwhm' in plots:
-        logger.debug("Rendering 'hwhm' subplot...")
         ax = axes['hwhm']
         x_unique = np.asarray(input_angles)
         pk = np.zeros(len(x_unique))
@@ -126,7 +123,6 @@ def plot_stats(input_angles, sigma_deg=None, sigma_err=None,
         ax.legend()
 
     if 'flux' in plots:
-        logger.debug("Rendering 'flux' subplot...")
         ax = axes['flux']
         ax.plot(input_angles, flux_rel, 'k--', alpha=0.5)
         ax.scatter(input_angles, flux_rel, marker='s', color='orchid', edgecolors='purple',
@@ -136,20 +132,17 @@ def plot_stats(input_angles, sigma_deg=None, sigma_err=None,
         ax.legend()
 
     if 'histogram' in plots:
-        logger.debug("Rendering 'histogram' subplot...")
         ax = axes['histogram']
         ax.hist(image.ravel(), bins=256, color='dimgray', edgecolor='black', linewidth=0.5)
         ax.set_yscale('log')
         ax.set(xlabel='Pixel Intensity (ADU)', ylabel='Count (Log Scale)',
                title=f'{title_prefix}Intensity')
 
-    logger.debug("Showing plot (block=False)...")
     plt.show(block=False)
 
 
 def plot_image(result):
     """Plots the raw image with the fitted ellipse at the fitted ring radius."""
-    logger.debug("Initializing figure rendering...")
     img = result['image']
     cx, cy = result['center']
     ax_a, ax_b = result['axes']
@@ -164,7 +157,6 @@ def plot_image(result):
     ax.add_patch(Ellipse((cx, cy), ax_a * scale, ax_b * scale, angle=img_angle,
                          color='red', fill=False, lw=1.5, linestyle='--'))
 
-    logger.debug("Displaying image...")
     plt.show()
     plt.close(fig)
 
@@ -195,7 +187,6 @@ def plot_eccentricity(results, angles, title_prefix=""):
 def plot_hwhm_channels(results, angles, pixel_size_mm=2.4e-3, camera_dist_mm=10,
                        ax1_x0=None, ax1_x1=None, ax2_x0=None, ax2_x1=None,
                        title_prefix="", show_ee=True):
-    logger.debug(f"Setting up subplots for {title_prefix}")
 
     valid_data = [(res, ang) for res, ang in zip(results, angles) if res]
     N = len(valid_data)
@@ -289,24 +280,201 @@ def plot_hwhm_channels(results, angles, pixel_size_mm=2.4e-3, camera_dist_mm=10,
                 continue
             x_ee_deg = _px_to_deg(x_ee_px, pixel_size_mm, camera_dist_mm)
             ax_ee.plot(x_ee_deg, y_ee, color=color, lw=2, linestyle=style, label=f'{name} EE')
-            p95_x = np.interp(0.95, y_ee, x_ee_deg)
-            ax_ee.plot(p95_x, 0.95, marker, markersize=5, label=f'{name} 95% ({p95_x:.2f}°)')
+            p85_x = np.interp(0.85, y_ee, x_ee_deg)
+            ax_ee.plot(p85_x, 0.85, marker, markersize=5, label=f'{name} 85% ({p85_x:.2f}°)')
 
         xlim_max_ee_deg = _px_to_deg(ax2_x1 or r_mean * 2.0, pixel_size_mm, camera_dist_mm)
-        ax_ee.axhline(0.95, color='gray', linestyle=':')
+        ax_ee.axhline(0.85, color='gray', linestyle=':')
         ax_ee.set(xlabel='Output Angle (degrees)', ylabel='Fraction of Total Flux',
                   title=f'{title_prefix}{ang}° Combined EE Profiles',
                   xlim=(ax2_x0 or 0, xlim_max_ee_deg))
         ax_ee.legend()
 
-    logger.debug("Rendering final figure...")
     plt.show()
     plt.close(fig)
 
+def plot_numerical_aperture(frd, n_index=1.0, title_prefix="", na_ref = 0.22):
 
-def plot_2d_contours(result, title="2D Planar Intensity with Contours", save_path=None):
+    """experimental characterization of NA internal flux relative to a wide NA normal flux"""
 
-    logger.debug(f"Starting 2D planar rendering for '{title}'...")
+    input_angles = np.asarray(frd['input_angles'], dtype=float)
+
+    def _na(theta_deg):
+        return n_index * unp.sin(unp.radians(theta_deg))
+
+    fig, ax = plt.subplots(figsize=(7, 6), tight_layout=True)
+
+    theta_peak = frd['theta_peak_deg']
+    na_peak = _na(theta_peak)
+    na_peak_nom, na_peak_err = unp.nominal_values(na_peak), unp.std_devs(na_peak)
+
+    ax.plot(input_angles, na_peak_nom, '--', color='black', lw=1.5,
+                label='Peak NA (median)')
+
+    sigma_deg = frd['sigma_deg']
+    theta_peak_nom = unp.nominal_values(theta_peak)
+    na_mof_outer = unp.nominal_values(_na(theta_peak + sigma_deg))
+    na_mof_inner = unp.nominal_values(_na(theta_peak - sigma_deg))
+
+    ax.plot(input_angles, na_mof_outer, '--', color='crimson', lw=1.5,
+            label='Moffat σ NA (outer)')
+
+    ax.plot(input_angles, na_mof_inner, '--', color='dodgerblue', lw=1.5,
+            label='Moffat σ NA (inner)')
+
+    med_left = np.asarray(frd['med_hwhm_left_deg'], dtype=float)
+    med_right = np.asarray(frd['med_hwhm_right_deg'], dtype=float)
+
+    valid_l = ~np.isnan(med_left)
+    valid_r = ~np.isnan(med_right)
+
+    if np.any(valid_l):
+        na_hwhm_inner = n_index * np.sin(np.radians(theta_peak_nom[valid_l] - med_left[valid_l]))
+        ax.plot(input_angles[valid_l], na_hwhm_inner, ':', color='navy', lw=1.5,
+                label='Empirical HWHM NA (inner)')
+    if np.any(valid_r):
+        na_hwhm_outer = n_index * np.sin(np.radians(theta_peak_nom[valid_r] + med_right[valid_r]))
+        ax.plot(input_angles[valid_r], na_hwhm_outer, ':', color='darkred', lw=1.5,
+                label='Empirical HWHM NA (outer)')
+
+    theta_out85 = frd['theta_out85_deg']
+    theta_out15 = frd['theta_out15_deg']
+    na_ee85 = _na(theta_out85)
+    na_ee15 = _na(theta_out15)
+    na_ee85_nom, na_ee85_err = unp.nominal_values(na_ee85), unp.std_devs(na_ee85)
+    na_ee15_nom, na_ee15_err = unp.nominal_values(na_ee15), unp.std_devs(na_ee15)
+
+    ax.errorbar(input_angles, na_ee85_nom, yerr=na_ee85_err, fmt='--', color='purple',
+                capsize=3, label='85% EE NA (median)')
+
+    ax.errorbar(input_angles, na_ee15_nom, yerr=na_ee15_err, fmt='--', color='indigo',
+                capsize=3, label='15% EE NA (median)')
+
+    if na_ref is not None:
+        ax.axhline(y=na_ref, color='gray', linestyle='--', lw=1.5, label=f'Fiber NA spec ({na_ref:.2f})')
+    ax.set(xlabel='Input angle (°)', ylabel='Numerical Aperture (NA)',
+           title=f'{title_prefix}Ring NA vs. Input Angle')
+
+    ax.legend(fontsize=8)
+    plt.show(block=False)
+
+def _ee_curve(res, prefer='empirical'):
+    order = [('ee_empirical', 'ee_r_px'), ('ee', 'ee_r_theoretical')]
+    if prefer == 'moffat': order = order[::-1]
+    for ykey, xkey in order:
+        ee, rp = res.get(ykey), res.get(xkey)
+        if ee is None or rp is None: continue
+        ee, rp = np.asarray(ee, float).ravel(), np.asarray(rp, float).ravel()
+        if ee.size != rp.size: continue
+        m = np.isfinite(ee) & np.isfinite(rp)
+        if m.sum() < 3: continue
+        o = np.argsort(rp[m])
+        return ee[m][o], rp[m][o]
+    return None, None
+
+
+def spec_enclosed_flux(results, angles, na_values, frd=None, n_index=1.0,
+                       pixel_size_mm=2.4e-3, camera_dist_mm=13.0, d_tol=0.10,
+                       use_frd_geometry=True, prefer='empirical', na_norm=None,
+                       flux_rel_min=0.5, weight_by_flux=False):
+    from uncertainties import ufloat
+
+    na_values = np.atleast_1d(np.asarray(na_values, float))
+    na_norm = float(np.max(na_values)) if na_norm is None else float(na_norm)
+
+    if frd is not None and use_frd_geometry:
+        D = frd.get('camera_dist_mm', ufloat(camera_dist_mm, d_tol * camera_dist_mm))
+        r0 = frd.get('intercept_mm', 0.0)
+    else:
+        D, r0 = ufloat(camera_dist_mm, d_tol * camera_dist_mm), 0.0
+
+    tan_ref = np.tan(np.arcsin(np.clip(np.append(na_values, na_norm) / n_index, -1.0, 1.0)))
+    r_ref = np.atleast_1d((r0 + D * tan_ref) / pixel_size_mm)
+    r_nom = np.array([getattr(v, 'nominal_value', v) for v in r_ref])
+    r_sig = np.array([getattr(v, 'std_dev', 0.0) for v in r_ref])
+
+    flux_rel = (np.asarray(frd['flux_rel'], float)
+                if frd is not None and frd.get('flux_rel') is not None else None)
+
+    angles = np.asarray(angles, float)
+    f = np.full((na_values.size, angles.size), np.nan)
+    f_err = np.full_like(f, np.nan)
+
+    for i, res in enumerate(results):
+        if res is None: continue
+        if flux_rel is not None and np.isfinite(flux_rel[i]) and flux_rel[i] < flux_rel_min: continue
+        ee, rp = _ee_curve(res, prefer)
+        if ee is None: continue
+        v = np.array([np.where(r <= rp[-1], np.interp(r, rp, ee), np.nan)
+                      for r in (r_nom, r_nom - r_sig, r_nom + r_sig)])
+        v = v[:, :-1] / v[:, -1:]
+        w = (flux_rel[i] if (weight_by_flux and flux_rel is not None
+                             and np.isfinite(flux_rel[i])) else 1.0)
+        f[:, i] = w * v[0]
+        f_err[:, i] = w * 0.5 * np.abs(v[2] - v[1])
+
+    return {'na_values': na_values, 'angles': angles, 'f': f, 'f_err': f_err,
+            'na_norm': na_norm}
+
+def plot_spec_enclosed_flux(datasets, na_ref=0.22, na_start=None, na_stop=None,
+                            na_step=None, na_values=None, n_index=1.0,
+                            pixel_size_mm=2.4e-3, camera_dist_mm=13.0, d_tol=0.10,
+                            use_frd_geometry=True, prefer='empirical', na_norm=None,
+                            title_prefix="", show_input_limit=True, ncols=None,
+                            flux_rel_min=0.5, weight_by_flux=False):
+
+    if na_values is None:
+        if na_start is None and na_stop is None and na_step is None:
+            na_values = np.atleast_1d(na_ref)
+        else:
+            a, b = (0.10 if na_start is None else na_start), (na_ref if na_stop is None else na_stop)
+            s = 0.02 if na_step is None else na_step
+            na_values = np.arange(a, b + 0.5 * s, s)
+    na_values = np.atleast_1d(np.asarray(na_values, float))
+    n_na = na_values.size
+
+    ncols = ncols or min(3, n_na)
+    nrows = int(np.ceil(n_na / ncols))
+    fig, axes = plt.subplots(nrows, ncols, figsize=(5.0 * ncols, 4.6 * nrows),
+                             tight_layout=True, squeeze=False, sharex=True, sharey=True)
+    axes = axes.ravel()
+    for ax in axes[n_na:]: ax.set_visible(False)
+
+    colors = plt.get_cmap('viridis')(np.linspace(0.05, 0.85, max(len(datasets), 1)))
+    out = {}
+
+    for (label, entry), color in zip(datasets.items(), colors):
+        results, angles, frd = entry if (isinstance(entry, tuple) and len(entry) == 3) else (*entry, None)
+        r = spec_enclosed_flux(results, angles, na_values, frd=frd, n_index=n_index,
+                               pixel_size_mm=pixel_size_mm, camera_dist_mm=camera_dist_mm,
+                               d_tol=d_tol, use_frd_geometry=use_frd_geometry, prefer=prefer,
+                               na_norm=na_norm, flux_rel_min=flux_rel_min,
+                               weight_by_flux=weight_by_flux)
+        out[label] = r
+        for k in range(n_na):
+            axes[k].errorbar(r['angles'], r['f'][k], yerr=r['f_err'][k], fmt='o-',
+                             color=color, capsize=3, lw=1.5, label=label)
+
+    for k, na in enumerate(na_values):
+        theta = np.degrees(np.arcsin(np.clip(na / n_index, -1.0, 1.0)))
+        axes[k].axhline(1.0, color='black', lw=1.0, alpha=0.5)
+        if show_input_limit:
+            axes[k].axvline(theta, color='gray', ls='--', lw=1.5)
+        axes[k].set(title=f'NA = {na:.3f}  ({theta:.1f}°)', ylim=(0, 1.05))
+        axes[k].grid(alpha=0.3)
+        if k % ncols == 0: axes[k].set_ylabel('Flux fraction inside NA')
+        if k >= n_na - ncols: axes[k].set_xlabel('Input angle (°)')
+
+    axes[0].legend(fontsize=8, loc='lower left')
+    fig.suptitle(f'{title_prefix}Spec-enclosed flux vs. input angle', y=1.0)
+    plt.show(block=False)
+    return out
+
+
+def plot_2d_contours(result, title="2D Planar Intensity with Contours",
+                     na_ref=0.22, pixel_size_mm=2.4e-3, camera_dist_mm=10.0, n_index=1.0):
+
+    logger.debug(f"Starting 2D rendering for '{title}'...")
 
     image = result['image']
     center, axes, angle = result['center'], result['axes'], result['angle']
@@ -314,23 +482,26 @@ def plot_2d_contours(result, title="2D Planar Intensity with Contours", save_pat
     r_peak = result['raw_peak_r']
     hwhm = result['h_emp_px']
 
-    ee_emp = result.get('ee_empirical')
-    ee_r_px = result.get('ee_r_px')
+    r_ee85 = result.get('ee85_radius_emp')
+    if r_ee85 is None or np.isnan(r_ee85):
+        r_ee85 = result.get('ee85_radius_moffat')
 
-    r_ee95 = result.get('ee95_radius_emp')
-    if r_ee95 is None or np.isnan(r_ee95):
-        r_ee95 = result.get('ee95_radius_moffat')
+    r_ee15 = result.get('ee85_emp')
+    if r_ee15 is None or np.isnan(r_ee15):
+        r_ee15 = result.get('ee15_moffat')
 
-    r_ee15 = None
-    if ee_emp is not None and ee_r_px is not None:
-        r_ee15 = float(np.interp(0.15, ee_emp, ee_r_px))
+    r_na_ref = None
+    if na_ref is not None:
+        theta_ref = np.arcsin(na_ref/n_index)
+        r_na_ref = camera_dist_mm * np.tan(theta_ref)/ pixel_size_mm
 
     radii_dict = {
-        'EE95 (Outer)': (r_ee95, 'red', '--'),
+        'EE85 (Outer)': (r_ee85, 'red', '--'),
         'HWHM (Outer)': (r_peak + hwhm, 'cyan', '-.'),
         'Peak Crest': (r_peak, 'green', '-'),
         'HWHM (Inner)': (r_peak - hwhm, 'cyan', '-.'),
         'EE15 (Inner)': (r_ee15, 'magenta', '--'),
+        f'NA={na_ref:.2f} spec': (r_na_ref, 'gray', '-'),
     }
 
     fig, ax = plt.subplots(figsize=(10, 8), tight_layout=True)
@@ -356,18 +527,12 @@ def plot_2d_contours(result, title="2D Planar Intensity with Contours", save_pat
     ax.set_xlim(max(0, center[0] - pad), min(w, center[0] + pad))
     ax.set_ylim(min(h, center[1] + pad), max(0, center[1] - pad))
 
-    if save_path:
-        logger.debug(f"Saving to {save_path}...")
-        plt.savefig(save_path)
-
-    logger.debug("Displaying plot and cleaning up memory...")
     plt.show(block=False)
 
 
 def plot_3d_intensity(image, title="3D Pixel Intensity Map", save_path=None, mesh_profiles=None,
                       theta_centers=None, r_coords_master=None, center=None, axes=None, angle=None):
 
-    logger.debug(f"Starting 3D rendering for '{title}'")
     X, Y = np.meshgrid(np.arange(image.shape[1]), np.arange(image.shape[0]))
 
     extrude = mesh_profiles is not None and center is not None
@@ -381,7 +546,6 @@ def plot_3d_intensity(image, title="3D Pixel Intensity Map", save_path=None, mes
         fig = plt.figure(figsize=(10, 8), tight_layout=True)
         ax = fig.add_subplot(111, projection='3d')
 
-    logger.debug("Generating surface plot data geometry...")
     stride = max(1, image.shape[0] // 100)
     surf = ax.plot_surface(X[::stride, ::stride], Y[::stride, ::stride], image[::stride, ::stride],
                            cmap='magma', edgecolor='none', alpha=0.9)
@@ -389,8 +553,6 @@ def plot_3d_intensity(image, title="3D Pixel Intensity Map", save_path=None, mes
     ax.set(title=title + " (Raw)", xlabel='X Pixel', ylabel='Y Pixel', zlabel='Intensity')
 
     if extrude:
-        logger.debug(f"Generating {num_slices} azimuthally extruded radial profile subplots...")
-
         theta_dense = np.linspace(0, 360, 100)
         R, THETA = np.meshgrid(r_coords_master, theta_dense)
         x_reconstructed, y_reconstructed = analysis._ring_xy_coordinates(R, THETA, center, axes, angle)
@@ -406,9 +568,7 @@ def plot_3d_intensity(image, title="3D Pixel Intensity Map", save_path=None, mes
                          xlabel='X Pixel', ylabel='Y Pixel', zlabel='Intensity')
 
     if save_path:
-        logger.debug(f"Saving to {save_path}...")
         plt.savefig(save_path)
 
-    logger.debug("Displaying plot and cleaning up memory...")
     plt.show(block=False)
     plt.close(fig)
