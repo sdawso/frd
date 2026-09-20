@@ -18,7 +18,6 @@ logger = logging.getLogger(__name__)
 
 # primary annulus identification function, very first point of contact for establishing analysis axes
 # takes an image path and optionally a path to a series of darks
-# TODO: integrate bias, flat reduction
 
 def _hwhm_crossings(r_prof, r_px, peak_r_px,
                     debounce_px=20.0, bin_step=5.0, h_frac=0.05):
